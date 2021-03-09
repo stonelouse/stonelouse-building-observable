@@ -30,16 +30,82 @@ class DataSource {
 }
 
 /**
+ * Safe Observer
+ */
+class SafeObserver {
+  constructor(destination) {
+    this.destination = destination;
+  }
+
+  next(value) {
+    // only try to next if you're subscribed have a handler
+    if (!this.isUnsubscribed && this.destination.next) {
+      try {
+        this.destination.next(value);
+      } catch (err) {
+        // if the provided handler errors, teardown resources, then throw
+        this.unsubscribe();
+        throw err;
+      }
+    }
+  }
+
+  error(err) {
+    // only try to emit error if you're subscribed and have a handler
+    if (!this.isUnsubscribed && this.destination.error) {
+      try {
+        this.destination.error(err);
+      } catch (e2) {
+        // if the provided handler errors, teardown resources, then throw
+        this.unsubscribe();
+        throw e2;
+      }
+      this.unsubscribe();
+    }
+  }
+
+  complete() {
+    // only try to emit completion if you're subscribed and have a handler
+    if (!this.isUnsubscribed && this.destination.complete) {
+      try {
+        this.destination.complete();
+      } catch (err) {
+        // if the provided handler errors, teardown resources, then throw
+        this.unsubscribe();
+        throw err;
+      }
+      this.unsubscribe();
+    }
+  }
+
+  unsubscribe() {
+    this.isUnsubscribed = true;
+    if (this.unsub) {
+      // Note: check and call `unsub()`
+      this.unsub();
+    }
+  }
+}
+
+/**
  * our observable
  */
 function myObservable(observer) {
-  let datasource = new DataSource();
-  datasource.ondata = e => observer.next(e);
-  datasource.onerror = err => observer.error(err);
-  datasource.oncomplete = () => observer.complete();
+  const safeObserver = new SafeObserver(observer);
+  const datasource = new DataSource();
+  datasource.ondata = e => safeObserver.next(e);
+  datasource.onerror = err => safeObserver.error(err);
+  datasource.oncomplete = () => safeObserver.complete();
+
+  safeObserver.unsub = () => {
+    datasource.destroy();
+  };
+
   return () => {
     datasource.destroy();
   };
+
+  return safeObserver.unsubscribe.bind(safeObserver);
 }
 
 /**
