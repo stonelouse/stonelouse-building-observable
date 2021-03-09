@@ -79,39 +79,45 @@ class SafeObserver {
   }
 
   unsubscribe() {
+    console.log("calling unsubscribe()");
     this.isUnsubscribed = true;
     if (this.unsub) {
       // Note: check and call `unsub()`
+      console.log("calling unsub()");
       this.unsub();
     }
+  }
+}
+
+class Observable {
+  constructor(_subscribe) {
+    this._subscribe = _subscribe;
+  }
+
+  subscribe(observer) {
+    const safeObserver = new SafeObserver(observer);
+    safeObserver.unsub = this._subscribe(safeObserver);
+    return safeObserver.unsubscribe.bind(safeObserver);
   }
 }
 
 /**
  * our observable
  */
-function myObservable(observer) {
-  const safeObserver = new SafeObserver(observer);
+const myObservable = new Observable(observer => {
   const datasource = new DataSource();
-  datasource.ondata = e => safeObserver.next(e);
-  datasource.onerror = err => safeObserver.error(err);
-  datasource.oncomplete = () => safeObserver.complete();
-
-  safeObserver.unsub = () => {
-    datasource.destroy();
-  };
-
+  datasource.ondata = e => observer.next(e);
+  datasource.onerror = err => observer.error(err);
+  datasource.oncomplete = () => observer.complete();
   return () => {
     datasource.destroy();
   };
-
-  return safeObserver.unsubscribe.bind(safeObserver);
-}
+});
 
 /**
  * now let's use it
  */
-const unsub = myObservable({
+const unsub = myObservable.subscribe({
   next(x) {
     console.log(x);
   },
