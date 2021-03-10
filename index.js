@@ -89,6 +89,9 @@ class SafeObserver {
   }
 }
 
+/*
+ * Observable basic implementation
+ */
 class Observable {
   constructor(_subscribe) {
     this._subscribe = _subscribe;
@@ -99,6 +102,20 @@ class Observable {
     safeObserver.unsub = this._subscribe(safeObserver);
     return safeObserver.unsubscribe.bind(safeObserver);
   }
+}
+
+/**
+ * map operator
+ */
+function map(source, project) {
+  return new Observable(observer => {
+    const mapObserver = {
+      next: x => observer.next(project(x)),
+      error: err => observer.error(err),
+      complete: () => observer.complete()
+    };
+    return source.subscribe(mapObserver);
+  });
 }
 
 /**
@@ -117,7 +134,7 @@ const myObservable = new Observable(observer => {
 /**
  * now let's use it
  */
-const unsub = myObservable.subscribe({
+const unsub = map(myObservable, x => `${x}_a`).subscribe({
   next(x) {
     console.log(x);
   },
@@ -132,4 +149,4 @@ const unsub = myObservable.subscribe({
 /**
  * uncomment to try out unsubscription
  */
-// setTimeout(unsub, 500);
+setTimeout(unsub, 500);
