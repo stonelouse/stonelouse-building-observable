@@ -103,39 +103,18 @@ class Observable {
     return safeObserver.unsubscribe.bind(safeObserver);
   }
 }
-
 /**
- * map operator
+ * Put map operator to prototype
  */
-// function map(source, project) {
-//   return new Observable(observer => {
-//     const mapObserver = {
-//       next: x => observer.next(project(x)),
-//       error: err => observer.error(err),
-//       complete: () => observer.complete()
-//     };
-//     return source.subscribe(mapObserver);
-//   });
-// }
-/**
- * more complicated map operator
- */
-function map(project) {
-  return (source) => new Observable((observer) => {
+Observable.prototype.map = function (project) {
+  return new Observable((observer) => {
     const mapObserver = {
       next: (x) => observer.next(project(x)),
       error: (err) => observer.error(err),
       complete: () => observer.complete()
     };
-    return source.subscribe(mapObserver);
+    return this.subscribe(mapObserver);
   });
-}
-
-/**
- * pipe helper
- */
-function pipe(initialValue, ...fns) {
-  return fns.reduce((state, fn) => fn(state), initialValue);
 }
 
 /**
@@ -154,11 +133,7 @@ const myObservable = new Observable(observer => {
 /**
  * now let's use it
  */
-const unsub = pipe(
-  myObservable,
-  map(x => `${x}_a`),
-  map(x => `${x}_B`)
-).subscribe({
+const unsub = myObservable.map(x => `${x}_a`).map(x => `${x}_B`).subscribe({
   next(x) {
     console.log(x);
   },
