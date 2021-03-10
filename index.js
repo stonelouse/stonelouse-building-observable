@@ -107,15 +107,35 @@ class Observable {
 /**
  * map operator
  */
-function map(source, project) {
-  return new Observable(observer => {
+// function map(source, project) {
+//   return new Observable(observer => {
+//     const mapObserver = {
+//       next: x => observer.next(project(x)),
+//       error: err => observer.error(err),
+//       complete: () => observer.complete()
+//     };
+//     return source.subscribe(mapObserver);
+//   });
+// }
+/**
+ * more complicated map operator
+ */
+function map(project) {
+  return (source) => new Observable((observer) => {
     const mapObserver = {
-      next: x => observer.next(project(x)),
-      error: err => observer.error(err),
+      next: (x) => observer.next(project(x)),
+      error: (err) => observer.error(err),
       complete: () => observer.complete()
     };
     return source.subscribe(mapObserver);
   });
+}
+
+/**
+ * pipe helper
+ */
+function pipe(initialValue, ...fns) {
+  return fns.reduce((state, fn) => fn(state), initialValue);
 }
 
 /**
@@ -134,7 +154,11 @@ const myObservable = new Observable(observer => {
 /**
  * now let's use it
  */
-const unsub = map(myObservable, x => `${x}_a`).subscribe({
+const unsub = pipe(
+  myObservable,
+  map(x => `${x}_a`),
+  map(x => `${x}_B`)
+).subscribe({
   next(x) {
     console.log(x);
   },
@@ -149,4 +173,4 @@ const unsub = map(myObservable, x => `${x}_a`).subscribe({
 /**
  * uncomment to try out unsubscription
  */
-setTimeout(unsub, 500);
+// setTimeout(unsub, 500);
